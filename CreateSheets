@@ -1,0 +1,115 @@
+/*
+ * Created by SharpDevelop.
+ * User: micha
+ * Date: 3/19/2019
+ * Time: 11:36 AM
+ * 
+ * To change this template use Tools | Options | Coding | Edit Standard Headers.
+ */
+using System;
+using Autodesk.Revit.UI;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI.Selection;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO; // add this reference for the CSV Streamreader
+
+namespace CreateSheets_C
+{
+    [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
+    [Autodesk.Revit.DB.Macros.AddInId("C64666DE-FD45-4D56-8055-F1F8C8A9BA09")]
+	public partial class ThisDocument
+	{
+		private void Module_Startup(object sender, EventArgs e)
+		{
+
+		}
+
+		private void Module_Shutdown(object sender, EventArgs e)
+		{
+
+		}
+
+		#region Revit Macros generated code
+		private void InternalStartup()
+		{
+			this.Startup += new System.EventHandler(Module_Startup);
+			this.Shutdown += new System.EventHandler(Module_Shutdown);
+		}
+		#endregion
+		
+		public void CreateSheets()
+        {
+        	// define current document
+            Document curDoc = this.Application.ActiveUIDocument.Document;
+            
+            // specify the CSV file
+            string curFile = @"C:\temp\Midwest\Round 2 - Sheet List.csv";
+            
+          	// create a list to hold the CSV data
+            List<string[]> sheetList = new List<string[]>();
+            
+            // create CSV reader and read file
+           	StreamReader reader = new StreamReader(curFile);
+            
+            // loop through CSV data and put into list
+            while(reader.EndOfStream == false)
+           	{
+        		// read current line
+        		string line = reader.ReadLine();
+        
+        		// split line at comma
+        		string[] values = line.Split(',');
+        
+        		// add line to list
+        		sheetList.Add(values);
+            }
+            
+			// remove header row
+			sheetList.RemoveAt(0);
+            
+            // get titleblock
+            FilteredElementCollector curCollector = new FilteredElementCollector(curDoc);
+            curCollector.OfCategory(BuiltInCategory.OST_TitleBlocks);
+            
+            // get all views in current project
+            FilteredElementCollector viewCollector = new FilteredElementCollector(curDoc);
+            viewCollector.OfClass(typeof(ViewPlan));
+            
+            // create sheets
+            Transaction curTrans = new Transaction(curDoc, "Create Sheets");
+           	curTrans.Start();
+            
+           	// loop through sheet list and create sheets
+           	foreach (string[] curSheet in sheetList) 
+            {
+				ViewSheet newSheet;
+
+				// create the sheet
+                newSheet = ViewSheet.Create(curDoc, curCollector.FirstElementId());
+                
+                // update sheet's parameters
+                newSheet.SheetNumber = curSheet[0];
+                newSheet.Name = curSheet[1];
+                
+                // loop through views and look for match in sheet data
+                foreach (ViewPlan curView in viewCollector) 
+                {
+                	if(curView.Name == curSheet[2])
+					{
+                		// define insertion point
+                        XYZ insPoint = new XYZ(0,0,0);
+                        
+                        // add view to sheet
+                        Viewport curVP = Viewport.Create(curDoc, newSheet.Id, curView.Id, insPoint);
+					}
+                }
+            }
+            
+            // close transaction
+            curTrans.Commit();
+            curTrans.Dispose();
+        }
+
+	}
+}
