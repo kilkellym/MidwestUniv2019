@@ -1,0 +1,158 @@
+public void CreateHouse()
+{
+			// define current document
+			Document curDoc = this.Application.ActiveUIDocument.Document;
+			
+			// create corner points
+			XYZ point1 = new XYZ(0,0,0);
+			XYZ point2 = new XYZ(25,0,0);
+			XYZ point3 = new XYZ(25,25,0);
+			XYZ point4 = new XYZ(0,25,0);
+			
+			// create lines from corner points
+			Line line1 = Line.CreateBound(point1, point2);
+			Line line2 = Line.CreateBound(point2, point3);
+			Line line3 = Line.CreateBound(point3, point4);
+			Line line4 = Line.CreateBound(point4, point1);
+			
+			// get wall level
+			Level wallLevel = getLevelByName(curDoc, "Level 1");
+			
+			// create transaction
+			Transaction wallTrans = new Transaction(curDoc, "Create Walls");
+			wallTrans.Start();
+			
+			// create walls
+			Wall wall1 = Wall.Create(curDoc, line1, wallLevel.Id, false);
+			Wall wall2 = Wall.Create(curDoc, line2, wallLevel.Id, false);
+			Wall wall3 = Wall.Create(curDoc, line3, wallLevel.Id, false);
+			Wall wall4 = Wall.Create(curDoc, line4, wallLevel.Id, false);
+			
+			// close transaction
+			wallTrans.Commit();
+			wallTrans.Dispose();
+			
+			// ----------------------------------------------------
+			// create floor
+			Floor curFloor;
+			
+			// create curve array
+			CurveArray curveAr = new CurveArray();
+			curveAr.Append(line1);
+			curveAr.Append(line2);
+			curveAr.Append(line3);
+			curveAr.Append(line4);
+			
+			// get floor type
+			FilteredElementCollector floorCollector = new FilteredElementCollector(curDoc);
+			floorCollector.OfCategory(BuiltInCategory.OST_Floors);
+			floorCollector.WhereElementIsElementType();
+			
+			// create transaction
+			Transaction floorTrans = new Transaction(curDoc, "Create Floor");
+			floorTrans.Start();
+			
+			// create floor
+			curFloor = curDoc.Create.NewFloor(curveAr, floorCollector.First() as FloorType, wallLevel, false);
+			
+			// close transaction
+			floorTrans.Commit();
+			floorTrans.Dispose();
+			
+			// ----------------------------------------------------
+			// create roof
+			FootPrintRoof curRoof;
+			
+			// get roof level
+			Level roofLevel = getLevelByName(curDoc, "Roof");
+			
+			// get roof type
+			FilteredElementCollector roofCollector = new FilteredElementCollector(curDoc);
+			roofCollector.OfCategory(BuiltInCategory.OST_Roofs);
+			roofCollector.WhereElementIsElementType();
+			
+			// create transaction
+			Transaction roofTrans = new Transaction(curDoc, "Create Roof");
+			roofTrans.Start();
+			
+			// create variable for roof footprint
+			ModelCurveArray roofFootprint = new ModelCurveArray();
+			
+			// create roof
+			curRoof = curDoc.Create.NewFootPrintRoof(curveAr, roofLevel, roofCollector.First() as RoofType, out roofFootprint);
+			
+			// adjust roof slope
+			foreach (ModelCurve curMC in roofFootprint) {
+				curRoof.set_DefinesSlope(curMC, true);
+				curRoof.set_SlopeAngle(curMC, 1);
+			}
+			
+			// close transaction
+			roofTrans.Commit();
+			roofTrans.Dispose();
+			
+			// ---------------------------------------------------
+			// insert doors and windows
+			
+			FamilyInstance curDoor;
+			FamilyInstance curWin1;
+			FamilyInstance curWin2;
+			FamilyInstance curWin3;
+			
+			// get door types
+			FilteredElementCollector doorCollector = new FilteredElementCollector(curDoc);
+			doorCollector.OfClass(typeof(FamilySymbol));
+			doorCollector.OfCategory(BuiltInCategory.OST_Doors);
+			
+			// get window types
+			FilteredElementCollector winCollector = new FilteredElementCollector(curDoc);
+			winCollector.OfClass(typeof(FamilySymbol));
+			winCollector.OfCategory(BuiltInCategory.OST_Windows);
+			
+			// get wall center points
+			XYZ wall1Center = new XYZ((point1.X + point2.X)/2, (point1.Y + point2.Y)/2, 0);
+			XYZ wall2Center = new XYZ((point2.X + point3.X)/2, (point2.Y + point3.Y)/2, 0);
+			XYZ wall3Center = new XYZ((point3.X + point4.X)/2, (point3.Y + point4.Y)/2, 0);
+			XYZ wall4Center = new XYZ((point4.X + point1.X)/2, (point4.Y + point1.Y)/2, 0);
+			
+			// set window insertion point
+			XYZ winInsPt = new XYZ(0,0,3);
+			
+			// define structural type
+			Autodesk.Revit.DB.Structure.StructuralType structType = Autodesk.Revit.DB.Structure.StructuralType.NonStructural;
+			
+			// create transaction
+			Transaction doorWinTrans = new Transaction(curDoc, "Insert door and windows");
+			doorWinTrans.Start();
+			
+			// insert door
+			curDoor = curDoc.Create.NewFamilyInstance(wall4Center, doorCollector.First() as FamilySymbol, wall4, structType);
+			
+			// insert windows
+			curWin1 = curDoc.Create.NewFamilyInstance(wall1Center.Add(winInsPt), winCollector.First() as FamilySymbol, wall1, structType);
+			curWin2 = curDoc.Create.NewFamilyInstance(wall2Center.Add(winInsPt), winCollector.First() as FamilySymbol, wall2, structType);
+			curWin3 = curDoc.Create.NewFamilyInstance(wall3Center.Add(winInsPt), winCollector.First() as FamilySymbol, wall3, structType);
+			
+			// close transaction
+			doorWinTrans.Commit();
+			doorWinTrans.Dispose();
+		}
+		
+    private Level getLevelByName(Document curDoc, string levelName)
+		{
+			  // get all levels
+			  FilteredElementCollector levelCollector = new FilteredElementCollector(curDoc);
+			  levelCollector.OfCategory(BuiltInCategory.OST_Levels);
+			  levelCollector.WhereElementIsNotElementType();
+			
+			   // loop through levels and check for match
+			  foreach (Level curLevel in levelCollector) 
+			  {
+				  if(curLevel.Name == levelName)
+				  {
+					  return curLevel;
+				  }
+			  }
+			
+			  return null;
+		}
