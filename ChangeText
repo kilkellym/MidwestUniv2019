@@ -1,0 +1,96 @@
+/*
+ * Created by SharpDevelop.
+ * User: micha
+ * Date: 3/19/2019
+ * Time: 11:20 AM
+ * 
+ * To change this template use Tools | Options | Coding | Edit Standard Headers.
+ */
+using System;
+using Autodesk.Revit.UI;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI.Selection;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ChangeText_C
+{
+    [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
+    [Autodesk.Revit.DB.Macros.AddInId("2E6EEC73-F4CB-4F50-880C-0B3729229A0E")]
+	public partial class ThisDocument
+	{
+		private void Module_Startup(object sender, EventArgs e)
+		{
+
+		}
+
+		private void Module_Shutdown(object sender, EventArgs e)
+		{
+
+		}
+
+		#region Revit Macros generated code
+		private void InternalStartup()
+		{
+			this.Startup += new System.EventHandler(Module_Startup);
+			this.Shutdown += new System.EventHandler(Module_Shutdown);
+		}
+		#endregion
+		public void TextToUpper()
+    	{
+        	// define current document
+        	Document curDoc = this.Application.ActiveUIDocument.Document;
+
+        	// get all text elements
+        	FilteredElementCollector textCollector = new FilteredElementCollector(curDoc);
+       		textCollector.OfCategory(BuiltInCategory.OST_TextNotes);
+        
+       		// output number of text notes
+       		TaskDialog.Show("test", textCollector.Count().ToString());
+        
+       		// create a transaction
+       		Transaction curTrans = new Transaction(curDoc, "Text to Upper");
+       		curTrans.Start();
+        
+       		// loop through collection of text notes
+       		foreach (TextNote curTextNote in textCollector) 
+       		{
+           		// change text to uppercase
+           		curTextNote.Text = curTextNote.Text.ToUpper();
+       		}
+        
+       		// committ changes and get rid of transaction
+       		curTrans.Commit();
+       		curTrans.Dispose();
+    	}
+		
+		public void TextToLower()
+    	{
+        	// define current document
+        	Document curDoc = this.Application.ActiveUIDocument.Document;
+
+        	// get all text elements
+        	FilteredElementCollector textCollector = new FilteredElementCollector(curDoc);
+       		textCollector.OfCategory(BuiltInCategory.OST_TextNotes);
+        
+       		// output number of text notes
+       		TaskDialog.Show("test", textCollector.Count().ToString());
+        
+       		// create a transaction
+       		Transaction curTrans = new Transaction(curDoc, "Text to Lower");
+       		curTrans.Start();
+        
+       		// loop through collection of text notes
+       		foreach (TextNote curTextNote in textCollector) 
+       		{
+           		// change text to uppercase
+           		curTextNote.Text = curTextNote.Text.ToLower();
+       		}
+        
+       		// committ changes and get rid of transaction
+       		curTrans.Commit();
+       		curTrans.Dispose();
+    	}
+
+	}
+}
